@@ -1,4 +1,5 @@
 import pygame
+import random
 image_pass = ''
 clock = pygame.time.Clock()
 pygame.init()
@@ -27,8 +28,19 @@ walk_left = [
     pygame.image.load(image_pass + 'images/sh-l6.png').convert_alpha(),
 ]
 
-ghost =pygame.image.load(image_pass + 'images/ghost.png').convert_alpha()
+ghost = pygame.image.load(image_pass + 'images/ghost.png').convert_alpha()
 ghost_list_in_game = []
+
+target = pygame.image.load(image_pass + 'images/target.png').convert_alpha()
+target_list_in_game = []
+
+bullet = pygame.image.load(image_pass + 'images/bullet1.png').convert_alpha()
+bullets_left = 10
+bullets = []
+
+ammo = pygame.image.load(image_pass + 'images/ammo.png').convert_alpha()
+ammo_list_in_game = []
+
 
 
 player_anim_count =0
@@ -43,23 +55,27 @@ jump_count = 12
 
 
 bg_sound1 = pygame.mixer.Sound(image_pass + 'sounds/music.mp3')
-#bg_sound2 = pygame.mixer.Sound(image_pass + 'sounds/steps.mp3')
 bg_sound1.play()
-#bg_sound2.play()
+
 
 ghost_timer = pygame.USEREVENT + 1
-pygame.time.set_timer(ghost_timer, 3000)
+pygame.time.set_timer(ghost_timer, random.randint(1000,3000))
+
+target_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(target_timer, random.randint(1000,3000))
+
+ammo_timer = pygame.USEREVENT + 3
+pygame.time.set_timer(ammo_timer, random.randint(1000,10000))
+
+
 
 
 label = pygame.font.Font(image_pass + 'fonts/Art-Victorian.ttf', 40)
 lose_label = label.render('Вы проиграли!', False, (193, 196, 199))
 restart_label = label.render('Начать заново', False, (115, 132, 148))
 restart_label_rect = restart_label.get_rect(topleft=(500, 300))
+bullets_label = label.render(f'Осталось пуль: {bullets_left}', False, (193, 196, 199))
 
-
-bullets_left = 5
-bullet = pygame.image.load(image_pass + 'images/bullet1.png').convert_alpha()
-bullets = []
 
 
 gameplay =True
@@ -68,8 +84,12 @@ running = True
 while running:
 # тело цикла-----------------------------------------------------------------------
 
+
     screen.blit(bg, (bg_x, 0))
     screen.blit(bg, (bg_x+1280, 0))
+
+    screen.blit(bullets_label, (500, 50))
+
 
     if gameplay:
         player_rect = walk_left[0].get_rect(topleft=(player_x, player_y))
@@ -84,6 +104,33 @@ while running:
 
                 if player_rect.colliderect(el):
                     gameplay = False
+
+
+        if target_list_in_game:
+            for (i, el) in enumerate(target_list_in_game):
+                screen.blit(target, el)
+                el.x -= 10
+
+                if el.x < -10:
+                    target_list_in_game.pop(i)
+
+
+        if ammo_list_in_game:
+            for (i, el) in enumerate(ammo_list_in_game):
+                screen.blit(ammo, el)
+                el.x -= 10
+
+                if el.x < -10:
+                    ammo_list_in_game.pop(i)
+
+                if player_rect.colliderect(el):
+                    bullets_left += 10
+                    ammo_list_in_game.pop(i)
+#                    break
+
+
+
+
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
@@ -133,6 +180,15 @@ while running:
                             ghost_list_in_game.pop(index)
                             bullets.pop(i)
 
+                if target_list_in_game:
+                    for (index, target_el) in enumerate(target_list_in_game):
+                        if el.colliderect(target_el):
+                            target_list_in_game.pop(index)
+                            bullets.pop(i)
+
+
+
+
     else:
         screen.fill((87, 88, 89))
         screen.blit(lose_label, (500, 250))
@@ -146,6 +202,9 @@ while running:
             bullets.clear()
             bullets_left = 5
 
+    bullets_label = label.render(f'Осталось пуль: {bullets_left}', False, (193, 196, 199))
+    screen.blit(bullets_label, (500, 50))
+
     # тело цикла-----------------------------------------------------------------------
     pygame.display.update()
 
@@ -153,9 +212,20 @@ while running:
         if event.type == pygame.QUIT:
             running = False
             pygame.quit()
-        if event.type == ghost_timer:
-            ghost_list_in_game.append(ghost.get_rect(topleft=(1300, 500)))
-#        if gameplay and event.type == pygame.KEYUP and event.key == pygame.K_b and bullets_left > 0:
+
+        rnd = random.randint(0, 2)
+        if rnd == 0:
+            if event.type == ghost_timer:
+                ghost_list_in_game.append(ghost.get_rect(topleft=(1300, 500)))
+        elif rnd == 1:
+            if event.type == target_timer:
+                target_list_in_game.append(target.get_rect(topleft=(1300, random.randint(200, 400))))
+        elif rnd == 2:
+            if event.type == ammo_timer:
+                ammo_list_in_game.append(ammo.get_rect(topleft=(1300, 600)))
+
+
+
         if gameplay and event.type == pygame.MOUSEBUTTONUP and bullets_left > 0:
             bullets.append(bullet.get_rect(topleft=(player_x + 30, player_y + 60)))
             bullets_left -= 1
