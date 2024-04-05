@@ -16,18 +16,10 @@ while run:
         if event.type == pygame.QUIT:
             run = False
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        image_rect.x -= speed
-
-    if keys[pygame.K_RIGHT]:
-        image_rect.x += speed
-
-    if keys[pygame.K_UP]:
-        image_rect.y -= speed
-
-    if keys[pygame.K_DOWN]:
-        image_rect.y += speed
+        if event.type == pygame.MOUSEMOTION:
+            mouseX, mouseY = pygame.mouse.get_pos()
+            image_rect.x = mouseX
+            image_rect.y = mouseY
 
 
     screen.fill((0, 0, 0))
