@@ -55,6 +55,7 @@ jump_count = 12
 
 
 bg_sound1 = pygame.mixer.Sound(image_pass + 'sounds/music.mp3')
+shoot_sound1 = pygame.mixer.Sound(image_pass + 'sounds/shoot1.mp3')
 bg_sound1.play()
 
 
@@ -169,7 +170,7 @@ while running:
         if bullets:
             for (i, el) in enumerate(bullets):
                 screen.blit(bullet, (el.x, el.y))
-                el.x += 10
+                el.x += 100
 
                 if el.x > 1300:
                     bullets.pop(i)
@@ -179,12 +180,14 @@ while running:
                         if el.colliderect(ghost_el):
                             ghost_list_in_game.pop(index)
                             bullets.pop(i)
-
-                if target_list_in_game:
-                    for (index, target_el) in enumerate(target_list_in_game):
-                        if el.colliderect(target_el):
-                            target_list_in_game.pop(index)
-                            bullets.pop(i)
+                try:
+                    if target_list_in_game:
+                        for (index, target_el) in enumerate(target_list_in_game):
+                            if el.colliderect(target_el):
+                                target_list_in_game.pop(index)
+                                bullets.pop(i)
+                except:
+                    pass
 
 
 
@@ -228,6 +231,7 @@ while running:
 
         if gameplay and event.type == pygame.MOUSEBUTTONUP and bullets_left > 0:
             bullets.append(bullet.get_rect(topleft=(player_x + 30, player_y + 60)))
+            shoot_sound1.play()
             bullets_left -= 1
 
     clock.tick(10)
