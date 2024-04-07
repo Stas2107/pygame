@@ -1,243 +1,147 @@
 import pygame
 import random
-image_pass = ''
-clock = pygame.time.Clock()
+
 pygame.init()
 
-screen = pygame.display.set_mode((1280, 720))
-pygame.display.set_caption("Kartashov_RunningMan")
-icon =pygame.image.load(image_pass + 'images/1778592.png')
-pygame.display.set_icon(icon)
+# Экран
+screenwidth, screenheight = 800, 600
+screen = pygame.display.set_mode((screenwidth, screenheight))
 
+# Цвета
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
-bg = pygame.image.load(image_pass + 'images/fon-3.jpg').convert()
-walk_right = [
-    pygame.image.load(image_pass + 'images/sh-r1.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-r2.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-r3.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-r4.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-r5.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-r6.png').convert_alpha(),
+# Класс для карт
+class Card:
+    def init(self, pos, name, value):
+        self.name = name
+        self.value = value
+        self.pos = pos
+        self.image = pygame.Surface((70, 100))
+        self.rect = self.image.get_rect(topleft=self.pos)
+        self.font = pygame.font.SysFont(None, 24)
+        text_name = self.font.render(str(self.name), True, BLACK)
+        self.image.fill(WHITE)
+        pygame.draw.rect(self.image, BLACK, (0, 0, 70, 100), 3)
+        self.image.blit(text_name, (5, 10))
+
+    def draw(self, screen):
+        screen.blit(self.image, self.pos)
+
+    def move(self, pos):
+        self.pos = pos
+        self.rect.topleft = self.pos
+
+# Класс для кнопки
+class Button:
+    def init(self, color, x, y, width, height, text=''):
+        self.color = color
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+
+    def draw(self, screen, outline=None):
+        if outline:
+            pygame.draw.rect(screen, outline,
+                (self.x - 2, self.y - 2, self.width + 4, self.height + 4), 0)
+        pygame.draw.rect(screen, self.color,
+                (self.x, self.y, self.width, self.height), 0)
+        if self.text != '':
+            font = pygame.font.SysFont(None, 24)
+            text = font.render(self.text, 1, (0, 0, 0))
+            screen.blit(text, (
+                self.x + (self.width / 2 - text.get_width() / 2),
+                self.y + (self.height / 2 - text.get_height() / 2)))
+
+    def is_over(self, pos):
+        if self.x < pos[0] < self.x + self.width:
+            if self.y < pos[1] < self.y + self.height:
+                return True
+        return False
+
+# Создаем и перемешиваем набор карт
+cards = [
+    Card((100, 500), 'Туз', 11),
+    Card((200, 500), 'Король', 10),
+    Card((300, 500), 'Дама', 9),
+    Card((400, 500), 'Валет', 8),
+    Card((500, 500), '10', 7),
+    Card((600, 500), '9', 6),
+    Card((700, 500), '8', 5),
+    Card((800, 500), '7', 4),
+    Card((900, 500), '6', 3)
 ]
-walk_left = [
-    pygame.image.load(image_pass + 'images/sh-l1.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-l2.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-l3.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-l4.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-l5.png').convert_alpha(),
-    pygame.image.load(image_pass + 'images/sh-l6.png').convert_alpha(),
-]
+random.shuffle(cards)  # Перемешиваем карты
 
-ghost = pygame.image.load(image_pass + 'images/ghost.png').convert_alpha()
-ghost_list_in_game = []
+# Раздача карт игрокам
+player_cards = cards[:2] # Первые две карты для игрока
+ai_cards = cards[2:4] # Следующие две карты для ИИ/второго игрока
+deck_cards = cards[4:] # Оставшиеся карты в колоде
 
-target = pygame.image.load(image_pass + 'images/target.png').convert_alpha()
-target_list_in_game = []
+startposx = 20
+startposy = 250
 
-bullet = pygame.image.load(image_pass + 'images/bullet1.png').convert_alpha()
-bullets_left = 10
-bullets = []
+# Адаптируем положение карт игрока
+for i, card in enumerate(player_cards):
+    card.pos = (startposx + 100 + i*100, startposy + 200)
+    card.rect = card.image.get_rect(topleft=card.pos)
 
-ammo = pygame.image.load(image_pass + 'images/ammo.png').convert_alpha()
-ammo_list_in_game = []
+# Адаптируем положение карт ИИ (в нашем случае не видно)
+for i, card in enumerate(ai_cards):
+    card.pos = (startposx + 100 + i*100, startposy - 200)  # Расположим их в верхней части экрана
+    card.rect = card.image.get_rect(topleft=card.pos)
 
+# Адаптируем положение карт в колоде
+for i, card in enumerate(deck_cards):
+    card.pos = (startposx + i*5, startposy)
+    card.rect = card.image.get_rect(topleft=card.pos)
 
+# Кнопка "Взять карту"
+take_button = Button((0,255,0), 600, 50, 100, 50, 'Взять карту')
 
-player_anim_count =0
-bg_x = 0
-
-player_speed =5
-player_x =640
-player_y =500
-
-is_jump = False
-jump_count = 12
-
-
-bg_sound1 = pygame.mixer.Sound(image_pass + 'sounds/music.mp3')
-shoot_sound1 = pygame.mixer.Sound(image_pass + 'sounds/shoot1.mp3')
-bg_sound1.play()
-
-
-ghost_timer = pygame.USEREVENT + 1
-pygame.time.set_timer(ghost_timer, random.randint(1000,3000))
-
-target_timer = pygame.USEREVENT + 2
-pygame.time.set_timer(target_timer, random.randint(1000,3000))
-
-ammo_timer = pygame.USEREVENT + 3
-pygame.time.set_timer(ammo_timer, random.randint(1000,10000))
-
-
-
-
-label = pygame.font.Font(image_pass + 'fonts/Art-Victorian.ttf', 40)
-lose_label = label.render('Вы проиграли!', False, (193, 196, 199))
-restart_label = label.render('Начать заново', False, (115, 132, 148))
-restart_label_rect = restart_label.get_rect(topleft=(500, 300))
-bullets_label = label.render(f'Осталось пуль: {bullets_left}', False, (193, 196, 199))
-
-
-
-gameplay =True
-
+# Основной цикл игры----------------------------------------------------------
 running = True
+dragging = False
+selected_card = None
+
 while running:
-# тело цикла-----------------------------------------------------------------------
-
-
-    screen.blit(bg, (bg_x, 0))
-    screen.blit(bg, (bg_x+1280, 0))
-
-    screen.blit(bullets_label, (500, 50))
-
-
-    if gameplay:
-        player_rect = walk_left[0].get_rect(topleft=(player_x, player_y))
-
-        if ghost_list_in_game:
-            for (i, el) in enumerate(ghost_list_in_game):
-                screen.blit(ghost, el)
-                el.x -= 10
-
-                if el.x < -10:
-                    ghost_list_in_game.pop(i)
-
-                if player_rect.colliderect(el):
-                    gameplay = False
-
-
-        if target_list_in_game:
-            for (i, el) in enumerate(target_list_in_game):
-                screen.blit(target, el)
-                el.x -= 10
-
-                if el.x < -10:
-                    target_list_in_game.pop(i)
-
-
-        if ammo_list_in_game:
-            for (i, el) in enumerate(ammo_list_in_game):
-                screen.blit(ammo, el)
-                el.x -= 10
-
-                if el.x < -10:
-                    ammo_list_in_game.pop(i)
-
-                if player_rect.colliderect(el):
-                    bullets_left += 10
-                    ammo_list_in_game.pop(i)
-#                    break
-
-
-
-
-
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
-            screen.blit(walk_left[player_anim_count], (player_x, player_y))
-        else:
-            screen.blit(walk_right[player_anim_count], (player_x, player_y))
-
-        if keys[pygame.K_LEFT] and player_x > 340:
-            player_x -= player_speed
-        elif keys[pygame.K_RIGHT] and player_x < 940:
-            player_x += player_speed
-
-        if not is_jump:
-            if keys[pygame.K_UP]:
-                is_jump = True
-        else:
-            if jump_count >= -12:
-                if jump_count > 0:
-                    player_y -= (jump_count ** 2) / 2
-                else:
-                    player_y += (jump_count ** 2) / 2
-                jump_count -= 1
-            else:
-                is_jump = False
-                jump_count = 12
-
-        if player_anim_count == 5:
-            player_anim_count = 0
-        else:
-            player_anim_count += 1
-
-        bg_x -= 5
-        if bg_x == -1280:
-            bg_x = 0
-
-        if bullets:
-            for (i, el) in enumerate(bullets):
-                screen.blit(bullet, (el.x, el.y))
-                el.x += 100
-
-                if el.x > 1300:
-                    bullets.pop(i)
-
-                if ghost_list_in_game:
-                    for (index, ghost_el) in enumerate(ghost_list_in_game):
-                        if el.colliderect(ghost_el):
-                            ghost_list_in_game.pop(index)
-                            bullets.pop(i)
-                try:
-                    if target_list_in_game:
-                        for (index, target_el) in enumerate(target_list_in_game):
-                            if el.colliderect(target_el):
-                                target_list_in_game.pop(index)
-                                bullets.pop(i)
-                except:
-                    pass
-
-
-
-
-    else:
-        screen.fill((87, 88, 89))
-        screen.blit(lose_label, (500, 250))
-        screen.blit(restart_label, (restart_label_rect))
-
-        mouse = pygame.mouse.get_pos()
-        if restart_label_rect.collidepoint(mouse) and pygame.mouse.get_pressed()[0]:
-            gameplay = True
-            player_x = 640
-            ghost_list_in_game.clear()
-            bullets.clear()
-            bullets_left = 5
-
-    bullets_label = label.render(f'Осталось пуль: {bullets_left}', False, (193, 196, 199))
-    screen.blit(bullets_label, (500, 50))
-
-    # тело цикла-----------------------------------------------------------------------
-    pygame.display.update()
+    pygame.time.delay(100)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-            pygame.quit()
 
-        rnd = random.randint(0, 2)
-        if rnd == 0:
-            if event.type == ghost_timer:
-                ghost_list_in_game.append(ghost.get_rect(topleft=(1300, 500)))
-        elif rnd == 1:
-            if event.type == target_timer:
-                target_list_in_game.append(target.get_rect(topleft=(1300, random.randint(200, 400))))
-        elif rnd == 2:
-            if event.type == ammo_timer:
-                ammo_list_in_game.append(ammo.get_rect(topleft=(1300, 600)))
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for card in player_cards:  # Разрешаем перемещать только карты игрока
+                if card.rect.collidepoint(event.pos):
+                    dragging = True
+                    selected_card = card
+                    break
 
+        if event.type == pygame.MOUSEBUTTONUP:
+            dragging = False
+            selected_card = None
 
+            if take_button.is_over(event.pos): # Если нажали на кнопку "Взять карту"
+                if len(deck_cards) > 0:
+                    card = deck_cards.pop()
+                    player_cards.append(card)
 
-        if gameplay and event.type == pygame.MOUSEBUTTONUP and bullets_left > 0:
-            bullets.append(bullet.get_rect(topleft=(player_x + 30, player_y + 60)))
-            shoot_sound1.play()
-            bullets_left -= 1
+        if event.type == pygame.MOUSEMOTION and dragging:
+            if selected_card is not None:
+                mouse_x, mouse_y = event.pos
+                selected_card.move((mouse_x-35, mouse_y-50))
 
-    clock.tick(10)
+    screen.fill((0, 128, 0))  # Зеленый цвет фона
 
+    for card in player_cards + ai_cards + deck_cards:  # Отрисовываем карты обоих игроков
+        card.draw(screen)
 
+    take_button.draw(screen) # Отрисовываем кнопку "Взять карту"
 
+# Обновляем экран--------------------------------------------------------------
+    pygame.display.flip()
 
-
-
+pygame.quit()
